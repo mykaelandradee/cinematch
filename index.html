@@ -115,10 +115,8 @@
             <div id="modal-video-container" class="hidden mb-8 aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10">
                 <iframe id="trailer-frame" class="w-full h-full" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             </div>
-            
             <h3 id="modal-title" class="text-4xl font-black mb-6 tracking-tighter"></h3>
             <p id="modal-desc" class="text-gray-300 text-lg leading-relaxed mb-10 font-light max-h-[30vh] overflow-y-auto pr-4"></p>
-            
             <button onclick="closeModal()" class="px-10 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-all">Fechar Alquimia</button>
         </div>
     </div>
@@ -175,7 +173,7 @@
 
     <script>
         const API_KEY = '5740f1c60616c26f12f0970f109ab3fe'; 
-        const IMG_URL = 'https://image.tmdb.org/p/w1280';
+        const IMG_URL = 'https://image.tmdb.org/t/p/w1280';
         let movieA = null, movieB = null;
         let currentRec = null;
         let mediaType = 'movie'; 
@@ -186,21 +184,43 @@
             'en-US': { subtitle: "The ultimate entertainment fusion.", labelA: "Source Alpha", labelB: "Source Beta", placeholder: "Search...", btn: "FIND MATCH", resTitle: "Alchemy Result", tag: "RECOMMENDED FUSION", readMore: "Full Synopsis", watchTrailer: "Watch Trailer", shareMsg: "Check out this CineMatch recommendation: " }
         };
 
-        function setMediaType(type) {
+        // CARREGA CACHE AO INICIAR
+        window.onload = () => {
+            const savedType = localStorage.getItem('mediaType');
+            if(savedType) setMediaType(savedType, false);
+            
+            const savedA = localStorage.getItem(`${mediaType}_movieA`);
+            const savedB = localStorage.getItem(`${mediaType}_movieB`);
+            
+            if(savedA) renderSelection(JSON.parse(savedA), 'input1', 'results1');
+            if(savedB) renderSelection(JSON.parse(savedB), 'input2', 'results2');
+            updateLanguage();
+        };
+
+        function setMediaType(type, shouldReset = true) {
             mediaType = type;
+            localStorage.setItem('mediaType', type);
             document.getElementById('toggle-movie').classList.toggle('active', type === 'movie');
             document.getElementById('toggle-tv').classList.toggle('active', type === 'tv');
-            resetAll();
-        }
+            
+            if(shouldReset) {
+                // Se mudar o modo, apenas mostramos o que estava salvo naquele modo
+                const savedA = localStorage.getItem(`${type}_movieA`);
+                const savedB = localStorage.getItem(`${type}_movieB`);
+                
+                // Limpa visual atual
+                document.getElementById('input1').classList.remove('hidden');
+                document.getElementById('input1').value = '';
+                document.getElementById('selected1').classList.add('hidden');
+                document.getElementById('input2').classList.remove('hidden');
+                document.getElementById('input2').value = '';
+                document.getElementById('selected2').classList.add('hidden');
+                document.getElementById('matchResult').classList.add('hidden');
+                movieA = null; movieB = null;
 
-        function resetAll() {
-            movieA = null; movieB = null; currentRec = null;
-            document.getElementById('input1').value = ''; document.getElementById('input1').classList.remove('hidden');
-            document.getElementById('input2').value = ''; document.getElementById('input2').classList.remove('hidden');
-            document.getElementById('selected1').classList.add('hidden');
-            document.getElementById('selected2').classList.add('hidden');
-            document.getElementById('matchResult').classList.add('hidden');
-            document.getElementById('bg-overlay').style.backgroundImage = 'none';
+                if(savedA) renderSelection(JSON.parse(savedA), 'input1', 'results1');
+                if(savedB) renderSelection(JSON.parse(savedB), 'input2', 'results2');
+            }
             checkButtonState();
         }
 
@@ -212,6 +232,7 @@
             document.getElementById('ui-label-b').innerText = t.labelB;
             document.getElementById('btnMatch').innerText = t.btn;
             document.getElementById('ui-result-title').innerText = t.resTitle;
+            document.querySelectorAll('input').forEach(i => i.placeholder = t.placeholder);
         }
 
         async function searchMedia(input, resultDivId) {
@@ -227,19 +248,22 @@
                 const div = document.createElement('div');
                 div.className = 'suggestion-item p-4 flex items-center gap-4 cursor-pointer transition-all border-b border-white/5';
                 div.innerHTML = `<img src="${item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : ''}" class="w-12 h-16 rounded-lg object-cover shadow-lg"><div class="text-left"><div class="font-bold text-sm">${title}</div></div>`;
-                div.onclick = () => selectMedia(item, input.id, resultDivId);
+                div.onclick = () => renderSelection(item, input.id, resultDivId);
                 resDiv.appendChild(div);
             });
         }
 
-        function selectMedia(item, inputId, resultDivId) {
+        function renderSelection(item, inputId, resultDivId) {
             const isA = inputId === 'input1';
-            if(isA) movieA = item; else movieB = item;
+            if(isA) { movieA = item; localStorage.setItem(`${mediaType}_movieA`, JSON.stringify(item)); }
+            else { movieB = item; localStorage.setItem(`${mediaType}_movieB`, JSON.stringify(item)); }
+            
             const selectionId = isA ? 'selected1' : 'selected2';
             const targetDiv = document.getElementById(selectionId);
             const input = document.getElementById(inputId);
+            
             input.classList.add('hidden');
-            document.getElementById(resultDivId).classList.add('hidden');
+            document.getElementById(resultDivId)?.classList.add('hidden');
             targetDiv.classList.remove('hidden');
             targetDiv.innerHTML = `<img src="https://image.tmdb.org/t/p/w92${item.poster_path}" class="w-16 h-20 rounded-xl shadow-2xl"><div class="flex-grow text-left"><div class="text-xl font-black">${item.title || item.name}</div><button onclick="resetSelection('${inputId}')" class="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Trocar</button></div>`;
             document.getElementById('bg-overlay').style.backgroundImage = `url(https://image.tmdb.org/t/p/w1280${item.poster_path})`;
@@ -247,10 +271,12 @@
         }
 
         function resetSelection(inputId) {
+            const isA = inputId === 'input1';
             document.getElementById(inputId).classList.remove('hidden');
             document.getElementById(inputId).value = '';
-            document.getElementById(inputId === 'input1' ? 'selected1' : 'selected2').classList.add('hidden');
-            if(inputId === 'input1') movieA = null; else movieB = null;
+            document.getElementById(isA ? 'selected1' : 'selected2').classList.add('hidden');
+            if(isA) { movieA = null; localStorage.removeItem(`${mediaType}_movieA`); }
+            else { movieB = null; localStorage.removeItem(`${mediaType}_movieB`); }
             checkButtonState();
         }
 
@@ -371,7 +397,6 @@
             btn.disabled = false;
             btn.innerText = translations[lang]?.btn || "ENCONTRAR MATCH";
         }
-        updateLanguage();
     </script>
 </body>
 </html>
