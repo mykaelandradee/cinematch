@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMatch | Recomendador Inteligente</title>
+    <title>CineMatch | Master Edition</title>
     
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2503/2503508.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,26 +20,30 @@
         .btn-glow:not(:disabled) { box-shadow: 0 0 20px rgba(79, 172, 254, 0.4); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; backdrop-filter: blur(15px); align-items: center; justify-content: center; padding: 20px; }
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        ::-webkit-scrollbar { width: 4px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         
         .toggle-btn { padding: 8px 20px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease; cursor: pointer; letter-spacing: 1px; }
         .toggle-btn.active { background: #fff; color: #000; }
         
-        .mood-btn { padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; opacity: 0.4; }
-        .mood-btn.active { opacity: 1; background: rgba(79, 172, 254, 0.2); border-color: #4facfe; color: #4facfe; }
+        .mood-btn, .era-btn { padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; opacity: 0.4; }
+        .mood-btn.active, .era-btn.active { opacity: 1; background: rgba(79, 172, 254, 0.2); border-color: #4facfe; color: #4facfe; }
         
         .genre-pill { padding: 6px 14px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); transition: all 0.3s; cursor: pointer; opacity: 0.6; }
         .genre-pill.active { background: #4facfe; color: black; opacity: 1; }
         
-        @keyframes skeleton-pulse { 0% { opacity: 0.05; } 50% { opacity: 0.15; } 100% { opacity: 0.05; } }
+        .provider-pill { width: 40px; height: 40px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; opacity: 0.3; filter: grayscale(1); }
+        .provider-pill.active { border-color: #4facfe; opacity: 1; transform: scale(1.1); filter: grayscale(0); box-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
+
         .skeleton { animation: skeleton-pulse 1.5s infinite ease-in-out; background: white; border-radius: 20px; }
+        @keyframes skeleton-pulse { 0% { opacity: 0.05; } 50% { opacity: 0.15; } 100% { opacity: 0.05; } }
         
+        #matchCard { perspective: 1000px; transition: transform 0.1s ease-out; transform-style: preserve-3d; }
         .fusion-anim-alpha { transform: translateX(50%) scale(0.5); opacity: 0; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         .fusion-anim-beta { transform: translateX(-50%) scale(0.5); opacity: 0; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        .provider-icon { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; }
-
-        #settings-drawer { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out, margin 0.5s ease; }
-        #settings-drawer.open { max-height: 800px; margin-top: 2rem; margin-bottom: 2rem; }
+        
+        #settings-drawer { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+        #settings-drawer.open { max-height: 1200px; margin-top: 2rem; margin-bottom: 2rem; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
@@ -57,11 +61,12 @@
             <h3 id="modal-title" class="text-4xl font-black mb-6 tracking-tighter"></h3>
             <p id="modal-desc" class="text-gray-300 text-lg leading-relaxed mb-10 font-light pr-4"></p>
             <div id="modal-extra-info" class="mb-10"></div>
-            <button onclick="closeModal()" class="px-10 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs">Fechar</button>
+            <button onclick="closeModal()" class="px-10 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-all">Fechar</button>
         </div>
     </div>
 
-    <div class="fixed top-6 right-6 z-[100] flex items-center gap-4">
+    <div class="fixed top-6 right-6 z-[100] flex items-center gap-4 animate-fade">
+        <button id="ui-surprise-btn" onclick="surpriseMe()" class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all">✨ Surpreenda-me</button>
         <div class="flex items-center bg-white/5 p-1 rounded-full border border-white/10 backdrop-blur-md">
             <div id="toggle-movie" class="toggle-btn active" onclick="setMediaType('movie')">FILMES</div>
             <div id="toggle-tv" class="toggle-btn" onclick="setMediaType('tv')">SÉRIES</div>
@@ -81,13 +86,13 @@
         <div class="grid md:grid-cols-2 gap-8 text-left">
             <div class="relative">
                 <label id="ui-label-a" class="block text-xs font-bold uppercase tracking-[0.2em] text-blue-400 mb-3 ml-1">Origem Alpha</label>
-                <input type="text" id="input1" oninput="searchMedia(this, 'results1')" placeholder="..." class="w-full p-5 rounded-3xl glass focus:outline-none focus:ring-1 focus:ring-white/30 text-lg relative z-20">
+                <input type="text" id="input1" onfocus="showTrending('results1', 'input1')" oninput="searchMedia(this, 'results1')" placeholder="..." class="w-full p-5 rounded-3xl glass focus:outline-none focus:ring-1 focus:ring-white/30 text-lg relative z-20">
                 <div id="results1" class="absolute z-[60] w-full mt-2 rounded-2xl glass overflow-hidden hidden"></div>
                 <div id="selected1" class="mt-4 hidden p-5 rounded-3xl glass flex items-center gap-5 border-l-4 border-blue-500 transition-all duration-500"></div>
             </div>
             <div class="relative">
                 <label id="ui-label-b" class="block text-xs font-bold uppercase tracking-[0.2em] text-blue-400 mb-3 ml-1">Origem Beta</label>
-                <input type="text" id="input2" oninput="searchMedia(this, 'results2')" placeholder="..." class="w-full p-5 rounded-3xl glass focus:outline-none focus:ring-1 focus:ring-white/30 text-lg relative z-20">
+                <input type="text" id="input2" onfocus="showTrending('results2', 'input2')" oninput="searchMedia(this, 'results2')" placeholder="..." class="w-full p-5 rounded-3xl glass focus:outline-none focus:ring-1 focus:ring-white/30 text-lg relative z-20">
                 <div id="results2" class="absolute z-[60] w-full mt-2 rounded-2xl glass overflow-hidden hidden"></div>
                 <div id="selected2" class="mt-4 hidden p-5 rounded-3xl glass flex items-center gap-5 border-l-4 border-blue-500 transition-all duration-500"></div>
             </div>
@@ -100,25 +105,31 @@
             
             <div id="settings-drawer" class="w-full">
                 <div class="glass p-8 rounded-[40px] space-y-10">
-                    <div class="flex flex-col items-center gap-3">
-                        <p id="ui-mood-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Intensidade (Mood)</p>
-                        <div class="flex gap-2">
-                            <button onclick="setMood('blockbuster')" id="mood-blockbuster" class="mood-btn active">🍿 <span id="ui-popcorn">MODO PIPOCA</span></button>
-                            <button onclick="setMood('cult')" id="mood-cult" class="mood-btn">🎬 <span id="ui-cult">MODO CULT</span></button>
+                    <div class="flex flex-col md:flex-row gap-10 justify-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <p id="ui-mood-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Intensidade (Mood)</p>
+                            <div class="flex gap-2">
+                                <button onclick="setMood('blockbuster')" id="mood-blockbuster" class="mood-btn active">🍿 <span id="ui-popcorn">MODO PIPOCA</span></button>
+                                <button onclick="setMood('cult')" id="mood-cult" class="mood-btn">🎬 <span id="ui-cult">MODO CULT</span></button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center gap-3">
+                            <p id="ui-era-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Época</p>
+                            <div class="flex gap-2">
+                                <button onclick="setEra('modern')" id="era-modern" class="mood-btn active">⚡ <span id="ui-modern">MODERNOS</span></button>
+                                <button onclick="setEra('classic')" id="era-classic" class="mood-btn">📼 <span id="ui-classic">NOSTÁLGICOS</span></button>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="flex flex-col items-center gap-3 border-t border-white/5 pt-6">
-                        <p id="ui-genre-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Estilo de Match</p>
-                        <div id="genre-container" class="flex flex-wrap justify-center gap-2"></div>
+                        <p id="ui-provider-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Meus Streamings (Priorizar resultados neles)</p>
+                        <div id="provider-container" class="flex flex-wrap justify-center gap-4 max-w-2xl"></div>
                     </div>
 
                     <div class="flex flex-col items-center gap-3 border-t border-white/5 pt-6">
-                        <p id="ui-era-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Época</p>
-                        <div class="flex gap-2">
-                            <button onclick="setEra('modern')" id="era-modern" class="mood-btn active">⚡ <span id="ui-modern">MODERNOS</span></button>
-                            <button onclick="setEra('classic')" id="era-classic" class="mood-btn">📼 <span id="ui-classic">NOSTÁLGICOS</span></button>
-                        </div>
+                        <p id="ui-genre-label" class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">Estilo de Match</p>
+                        <div id="genre-container" class="flex flex-wrap justify-center gap-2"></div>
                     </div>
                 </div>
             </div>
@@ -137,7 +148,7 @@
 
         <div id="matchResult" class="hidden pt-16 border-t border-white/5 mt-16 animate-fade">
             <h2 id="ui-result-title" class="text-center text-xs font-bold tracking-[0.4em] uppercase mb-12 text-gray-500">Resultado da Alquimia</h2>
-            <div id="matchCard" class="max-w-4xl mx-auto glass rounded-[40px] overflow-hidden flex flex-col md:flex-row shadow-2xl transition-all"></div>
+            <div id="matchCard" onmousemove="handleTilt(event)" onmouseleave="resetTilt()" class="max-w-4xl mx-auto glass rounded-[40px] overflow-hidden flex flex-col md:flex-row shadow-2xl transition-all duration-100"></div>
         </div>
 
         <div id="historySection" class="hidden mt-20 pt-10 border-t border-white/5 animate-fade">
@@ -153,25 +164,28 @@
         const API_KEY = '5740f1c60616c26f12f0970f109ab3fe'; 
         const IMG_URL = 'https://image.tmdb.org/t/p/w500';
         let movieA = null, movieB = null, mediaType = 'movie', currentMood = 'blockbuster', selectedGenre = null, currentEra = 'modern';
+        let userProviders = [];
 
         const translations = {
             'pt-BR': { 
                 subtitle: "A fusão definitiva da sétima arte.", labelA: "Origem Alpha", labelB: "Origem Beta", placeholder: "Busque...", btn: "ENCONTRAR MATCH", loading: "FUNDINDO...", resTitle: "Resultado da Alquimia", tag: "FUSÃO RECOMENDADA", readMore: "Sinopse Completa", watchTrailer: "Assistir Trailer", providers: "Assista em:", histMovie: "Alquimias de Filmes", histTv: "Alquimias de Séries", clear: "LIMPAR HISTÓRICO",
-                settingsBtn: "Ajustes de Alquimia", moodLabel: "Intensidade (Mood)", genreLabel: "Estilo de Match", eraLabel: "Época", popcorn: "MODO PIPOCA", cult: "MODO CULT", modern: "MODERNOS", classic: "NOSTÁLGICOS"
+                settingsBtn: "Ajustes de Alquimia", moodLabel: "Intensidade (Mood)", genreLabel: "Estilo de Match", eraLabel: "Época", popcorn: "MODO PIPOCA", cult: "MODO CULT", modern: "MODERNOS", classic: "NOSTÁLGICOS", trending: "🔥 TENDÊNCIAS DE HOJE", providerLabel: "Meus Streamings (Priorizar resultados neles)",
+                surpriseBtn: "✨ Surpreenda-me", toggleMovie: "FILMES", toggleTv: "SÉRIES"
             },
             'en-US': { 
                 subtitle: "The ultimate entertainment fusion.", labelA: "Source Alpha", labelB: "Source Beta", placeholder: "Search...", btn: "FIND MATCH", loading: "FUSING...", resTitle: "Alchemy Result", tag: "RECOMMENDED FUSION", readMore: "Full Synopsis", watchTrailer: "Watch Trailer", providers: "Watch on:", histMovie: "Movie Alchemies", histTv: "Series Alchemies", clear: "CLEAR HISTORY",
-                settingsBtn: "Alchemy Settings", moodLabel: "Intensity (Mood)", genreLabel: "Match Style", eraLabel: "Era", popcorn: "BLOCKBUSTER", cult: "CULT MODE", modern: "MODERN", classic: "CLASSIC"
+                settingsBtn: "Alchemy Settings", moodLabel: "Intensity (Mood)", genreLabel: "Match Style", eraLabel: "Era", popcorn: "BLOCKBUSTER", cult: "CULT MODE", modern: "MODERN", classic: "CLASSIC", trending: "🔥 TRENDING TODAY", providerLabel: "My Streamings (Prioritize results on them)",
+                surpriseBtn: "✨ Surprise Me", toggleMovie: "MOVIES", toggleTv: "SERIES"
             }
         };
 
         const genresData = {
             'pt-BR': {
-                movie: [ {id: 28, name: 'Ação'}, {id: 35, name: 'Comédia'}, {id: 18, name: 'Drama'}, {id: 27, name: 'Terror'}, {id: 10749, name: 'Romance'} ],
+                movie: [ {id: 28, name: 'Ação'}, {id: 35, name: 'Comédia'}, {id: 18, name: 'Drama'}, {id: 27, name: 'Terror'}, {id: 878, name: 'Sci-Fi'} ],
                 tv: [ {id: 10759, name: 'Ação'}, {id: 35, name: 'Comédia'}, {id: 18, name: 'Drama'}, {id: 9648, name: 'Mistério'}, {id: 10765, name: 'Sci-Fi'} ]
             },
             'en-US': {
-                movie: [ {id: 28, name: 'Action'}, {id: 35, name: 'Comedy'}, {id: 18, name: 'Drama'}, {id: 27, name: 'Horror'}, {id: 10749, name: 'Romance'} ],
+                movie: [ {id: 28, name: 'Action'}, {id: 35, name: 'Comedy'}, {id: 18, name: 'Drama'}, {id: 27, name: 'Horror'}, {id: 878, name: 'Sci-Fi'} ],
                 tv: [ {id: 10759, name: 'Action'}, {id: 35, name: 'Comedy'}, {id: 18, name: 'Drama'}, {id: 9648, name: 'Mystery'}, {id: 10765, name: 'Sci-Fi'} ]
             }
         };
@@ -180,7 +194,76 @@
             const savedType = localStorage.getItem('mediaType') || 'movie';
             setMediaType(savedType, false);
             updateLanguage();
+            loadAllProviders();
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('input')) {
+                    document.getElementById('results1').classList.add('hidden');
+                    document.getElementById('results2').classList.add('hidden');
+                }
+            });
         };
+
+        async function loadAllProviders() {
+            const container = document.getElementById('provider-container');
+            const res = await fetch(`https://api.themoviedb.org/3/watch/providers/${mediaType}?api_key=${API_KEY}&watch_region=BR`).then(r => r.json());
+            const topIds = [8, 337, 119, 384, 15, 2, 531, 307, 122, 11, 499, 129];
+            const list = res.results.filter(p => topIds.includes(p.provider_id)).sort((a, b) => a.display_priority - b.display_priority);
+            container.innerHTML = list.map(p => `
+                <img src="https://image.tmdb.org/t/p/original${p.logo_path}" 
+                     onclick="toggleProvider(${p.provider_id})" 
+                     id="prov-${p.provider_id}" 
+                     class="provider-pill ${userProviders.includes(p.provider_id) ? 'active' : ''}" 
+                     title="${p.provider_name}">
+            `).join('');
+        }
+
+        async function surpriseMe() {
+            const lang = document.getElementById('langSelect').value;
+            const res = await fetch(`https://api.themoviedb.org/3/trending/${mediaType}/day?api_key=${API_KEY}&language=${lang}`).then(r => r.json());
+            const items = res.results.sort(() => 0.5 - Math.random());
+            selectMedia(items[0], 'input1', 'results1');
+            selectMedia(items[1], 'input2', 'results2');
+        }
+
+        async function showTrending(divId, inputId) {
+            const lang = document.getElementById('langSelect').value;
+            const t = translations[lang] || translations['pt-BR'];
+            const resDiv = document.getElementById(divId);
+            const res = await fetch(`https://api.themoviedb.org/3/trending/${mediaType}/day?api_key=${API_KEY}&language=${lang}`).then(r => r.json());
+            resDiv.innerHTML = `<div class="p-3 text-[9px] font-black text-gray-500 uppercase tracking-widest bg-white/5">${t.trending}</div>`;
+            resDiv.classList.remove('hidden');
+            res.results.slice(0, 4).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item p-3 flex items-center gap-4 cursor-pointer border-b border-white/5';
+                div.innerHTML = `<img src="https://image.tmdb.org/t/p/w92${item.poster_path}" class="w-8 h-10 rounded object-cover"><div class="text-left font-bold text-xs text-white">${item.title || item.name}</div>`;
+                div.onclick = () => selectMedia(item, inputId, divId);
+                resDiv.appendChild(div);
+            });
+        }
+
+        function handleTilt(e) {
+            const card = document.getElementById('matchCard');
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const rotateX = (y - (rect.height/2)) / 30;
+            const rotateY = ((rect.width/2) - x) / 30;
+            card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
+        }
+
+        function resetTilt() { document.getElementById('matchCard').style.transform = `rotateX(0deg) rotateY(0deg) scale(1)`; }
+
+        function toggleProvider(id) {
+            const el = document.getElementById(`prov-${id}`);
+            if (userProviders.includes(id)) {
+                userProviders = userProviders.filter(p => p !== id);
+                el.classList.remove('active');
+            } else {
+                userProviders.push(id);
+                el.classList.add('active');
+            }
+        }
 
         function toggleDrawer() {
             const d = document.getElementById('settings-drawer');
@@ -192,7 +275,7 @@
 
         function setEra(era) {
             currentEra = era;
-            document.querySelectorAll('[id^="era-"]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#era-modern, #era-classic').forEach(b => b.classList.remove('active'));
             document.getElementById(`era-${era}`).classList.add('active');
         }
 
@@ -222,12 +305,11 @@
             document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`toggle-${type}`).classList.add('active');
             
-            // RESET DE AJUSTES AO TROCAR TIPO (NOVO)
             selectedGenre = null;
             setMood('blockbuster');
             setEra('modern');
-            
             renderGenres();
+            loadAllProviders();
             
             if(shouldReset) {
                 movieA = null; movieB = null;
@@ -256,7 +338,7 @@
             const lang = document.getElementById('langSelect').value;
             const query = input.value;
             const resDiv = document.getElementById(resultDivId);
-            if (query.length < 3) { resDiv.classList.add('hidden'); return; }
+            if (query.length < 3) return;
             const response = await fetch(`https://api.themoviedb.org/3/search/${mediaType}?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=${lang}`);
             const data = await response.json();
             resDiv.innerHTML = ''; resDiv.classList.remove('hidden');
@@ -309,7 +391,11 @@
             document.getElementById('ui-cult').innerText = t.cult;
             document.getElementById('ui-modern').innerText = t.modern;
             document.getElementById('ui-classic').innerText = t.classic;
-            
+            document.getElementById('ui-provider-label').innerText = t.providerLabel;
+            document.getElementById('ui-surprise-btn').innerText = t.surpriseBtn;
+            document.getElementById('toggle-movie').innerText = t.toggleMovie;
+            document.getElementById('toggle-tv').innerText = t.toggleTv;
+
             document.querySelectorAll('input').forEach(i => i.placeholder = t.placeholder);
             renderGenres();
             renderHistory();
@@ -321,7 +407,8 @@
                 fetch(`https://api.themoviedb.org/3/${type}/${id}/videos?api_key=${API_KEY}&language=${lang}`).then(r => r.json()),
                 fetch(`https://api.themoviedb.org/3/${type}/${id}/watch/providers?api_key=${API_KEY}`).then(r => r.json())
             ]);
-            return { trailer: v.results.find(vid => vid.type === 'Trailer' && vid.site === 'YouTube')?.key, providers: p.results?.BR?.flatrate || [] };
+            let trailer = v.results.find(vid => vid.type === 'Trailer' && vid.site === 'YouTube')?.key;
+            return { trailer: trailer, providers: p.results?.BR?.flatrate || [] };
         }
 
         async function openModal(id, type, forceVideo = false) {
@@ -359,12 +446,10 @@
             const h = JSON.parse(localStorage.getItem(key) || '[]');
             const container = document.getElementById('historyContainer');
             const section = document.getElementById('historySection');
-            const title = document.getElementById('historyTitle');
-            const lang = document.getElementById('langSelect').value;
-            const t = translations[lang] || translations['pt-BR'];
+            const t = translations[document.getElementById('langSelect').value] || translations['pt-BR'];
             if (h.length > 0) {
                 section.classList.remove('hidden');
-                title.innerText = mediaType === 'movie' ? t.histMovie : t.histTv;
+                document.getElementById('historyTitle').innerText = mediaType === 'movie' ? t.histMovie : t.histTv;
                 container.innerHTML = h.map(m => `
                     <div class="cursor-pointer group text-center" onclick="openModal(${m.id}, '${m.type}', true)">
                         <img src="${IMG_URL}${m.poster_path}" class="w-24 h-36 rounded-xl glass border border-white/5 hover:scale-105 transition-all object-cover">
@@ -378,7 +463,6 @@
             const t = translations[lang] || translations['pt-BR'];
             const btn = document.getElementById('btnMatch');
             btn.disabled = true; btn.innerText = t.loading;
-
             document.getElementById('snd-process').play();
             document.getElementById('selected1').classList.add('fusion-anim-alpha');
             document.getElementById('selected2').classList.add('fusion-anim-beta');
@@ -386,23 +470,24 @@
             document.getElementById('skeletonMatch').classList.remove('hidden');
 
             try {
-                const [kwA, kwB] = await Promise.all([
+                const [kwA, kwB, castA, castB] = await Promise.all([
                     fetch(`https://api.themoviedb.org/3/${mediaType}/${movieA.id}/keywords?api_key=${API_KEY}`).then(r => r.json()),
-                    fetch(`https://api.themoviedb.org/3/${mediaType}/${movieB.id}/keywords?api_key=${API_KEY}`).then(r => r.json())
+                    fetch(`https://api.themoviedb.org/3/${mediaType}/${movieB.id}/keywords?api_key=${API_KEY}`).then(r => r.json()),
+                    fetch(`https://api.themoviedb.org/3/${mediaType}/${movieA.id}/credits?api_key=${API_KEY}`).then(r => r.json()),
+                    fetch(`https://api.themoviedb.org/3/${mediaType}/${movieB.id}/credits?api_key=${API_KEY}`).then(r => r.json())
                 ]);
+                const castIds = [...castA.cast.slice(0,3), ...castB.cast.slice(0,3)].map(c => c.id).join('|');
                 const keys = [...(kwA.keywords || kwA.results || []), ...(kwB.keywords || kwB.results || [])].map(k => k.id).slice(0, 10).join('|');
-                
                 let url = `https://api.themoviedb.org/3/discover/${mediaType}?api_key=${API_KEY}&with_keywords=${keys}&language=${lang}&exclude_ids=${movieA.id},${movieB.id}`;
                 if(selectedGenre) url += `&with_genres=${selectedGenre}`;
+                if(userProviders.length > 0) url += `&with_watch_providers=${userProviders.join('|')}&watch_region=BR`;
+                if(castIds) url += `&with_cast=${castIds}`;
                 const dateParam = mediaType === 'movie' ? 'primary_release_date' : 'first_air_date';
                 url += currentEra === 'modern' ? `&${dateParam}.gte=2010-01-01` : `&${dateParam}.lte=2009-12-31`;
-
                 if (currentMood === 'blockbuster') url += `&sort_by=popularity.desc&vote_count.gte=500`;
                 else url += `&sort_by=vote_average.desc&vote_count.gte=100&popularity.lte=50&vote_average.gte=7.0`;
-
                 const disc = await fetch(url).then(r => r.json());
                 const f = disc.results[Math.floor(Math.random() * Math.min(disc.results.length, 10))];
-
                 setTimeout(() => {
                     document.getElementById('skeletonMatch').classList.add('hidden');
                     if (f) { document.getElementById('snd-success').play(); saveToHistory(f); showRecommendation(f); }
@@ -419,12 +504,12 @@
             const matchResultDiv = document.getElementById('matchResult');
             matchResultDiv.classList.remove('hidden');
             document.getElementById('matchCard').innerHTML = `
-                <img src="${IMG_URL}${f.poster_path}" class="w-full md:w-[400px] object-cover h-[550px]">
+                <img src="${IMG_URL}${f.poster_path}" class="w-full md:w-[400px] object-cover h-[550px] shadow-2xl">
                 <div class="p-10 md:p-14 flex flex-col justify-center text-left flex-grow">
                     <span class="text-blue-400 text-sm font-black uppercase tracking-[0.3em] mb-4">${t.tag}</span>
                     <h3 class="text-5xl font-black mb-6 leading-none tracking-tighter">${f.title || f.name}</h3>
                     <p class="text-gray-300 text-lg leading-relaxed mb-4 font-light">${f.overview ? f.overview.substring(0, 220) + '...' : ''}</p>
-                    <button onclick="openModal(${f.id}, '${mediaType}')" class="text-blue-400 font-bold uppercase tracking-widest text-xs mb-8">${t.readMore} +</button>
+                    <button onclick="openModal(${f.id}, '${mediaType}')" class="text-blue-400 font-bold uppercase tracking-widest text-xs mb-8 text-left">${t.readMore} +</button>
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="px-6 py-3 rounded-2xl bg-white/10 font-bold text-xl">⭐ ${f.vote_average?.toFixed(1)}</div>
                         ${details.trailer ? `<button onclick="openModal(${f.id}, '${mediaType}', true)" class="btn-play px-7 py-3 rounded-2xl font-bold flex items-center gap-3">▶ ${t.watchTrailer}</button>` : ''}
