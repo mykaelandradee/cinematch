@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -56,8 +55,8 @@
         #modal-overlay {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 200; backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.9);
+            z-index: 200; backdrop-filter: blur(15px);
             align-items: center; justify-content: center;
             padding: 20px;
         }
@@ -74,7 +73,6 @@
             transform: translateY(-2px);
         }
 
-        /* Toggle Séries/Filmes */
         .toggle-container {
             display: flex;
             align-items: center;
@@ -84,16 +82,27 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
         .toggle-btn {
-            padding: 8px 24px;
+            padding: 8px 20px;
             border-radius: 99px;
-            font-size: 0.875rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             transition: all 0.3s ease;
             cursor: pointer;
+            letter-spacing: 1px;
         }
         .toggle-btn.active {
             background: #fff;
             color: #000;
+        }
+
+        .btn-play {
+            background: #ff0000;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-play:hover {
+            transform: scale(1.05);
+            background: #cc0000;
         }
     </style>
 </head>
@@ -102,23 +111,28 @@
     <div id="bg-overlay"></div>
 
     <div id="modal-overlay" onclick="closeModal()">
-        <div class="max-w-2xl w-full glass p-10 rounded-[40px] animate-fade text-left" onclick="event.stopPropagation()">
-            <h3 id="modal-title" class="text-4xl font-black mb-6"></h3>
-            <p id="modal-desc" class="text-gray-300 text-lg leading-relaxed mb-8 font-light max-h-[60vh] overflow-y-auto pr-4"></p>
-            <button onclick="closeModal()" class="px-8 py-3 rounded-full bg-white text-black font-bold uppercase tracking-widest text-sm hover:scale-105 transition-all">Fechar</button>
+        <div class="max-w-4xl w-full glass p-8 md:p-12 rounded-[40px] animate-fade text-left relative" onclick="event.stopPropagation()">
+            <div id="modal-video-container" class="hidden mb-8 aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                <iframe id="trailer-frame" class="w-full h-full" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+            
+            <h3 id="modal-title" class="text-4xl font-black mb-6 tracking-tighter"></h3>
+            <p id="modal-desc" class="text-gray-300 text-lg leading-relaxed mb-10 font-light max-h-[30vh] overflow-y-auto pr-4"></p>
+            
+            <button onclick="closeModal()" class="px-10 py-4 rounded-full bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-all">Fechar Alquimia</button>
         </div>
     </div>
 
-    <div class="fixed top-6 right-6 z-[100] flex items-center gap-4">
-        <div class="toggle-container">
+    <div class="fixed top-6 right-6 z-[100] flex items-center gap-4 animate-fade">
+        <div class="toggle-container glass">
             <div id="toggle-movie" class="toggle-btn active" onclick="setMediaType('movie')">FILMES</div>
             <div id="toggle-tv" class="toggle-btn" onclick="setMediaType('tv')">SÉRIES</div>
         </div>
-        <select id="langSelect" onchange="updateLanguage()" class="bg-black/40 text-white border border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-md">
-            <option value="pt-BR">Português (BR)</option>
-            <option value="en-US">English (US)</option>
-            <option value="es-ES">Español (ES)</option>
-            <option value="fr-FR">Français (FR)</option>
+        <select id="langSelect" onchange="updateLanguage()" class="bg-black/40 text-white border border-white/10 rounded-full px-4 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-md">
+            <option value="pt-BR">PT-BR</option>
+            <option value="en-US">EN-US</option>
+            <option value="es-ES">ES-ES</option>
+            <option value="fr-FR">FR-FR</option>
         </select>
     </div>
 
@@ -148,7 +162,7 @@
 
         <div class="flex justify-center pt-6">
             <button onclick="generateRecommendation()" id="btnMatch" disabled
-                class="px-16 py-5 rounded-full bg-white text-black font-black text-xl btn-glow transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase">
+                class="px-16 py-5 rounded-full bg-white text-black font-black text-xl btn-glow transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase tracking-tighter">
                 Encontrar Match
             </button>
         </div>
@@ -161,14 +175,15 @@
 
     <script>
         const API_KEY = '5740f1c60616c26f12f0970f109ab3fe'; 
-        const IMG_URL = 'https://image.tmdb.org/t/p/w1280';
+        const IMG_URL = 'https://image.tmdb.org/p/w1280';
         let movieA = null, movieB = null;
         let currentRec = null;
-        let mediaType = 'movie'; // 'movie' ou 'tv'
+        let mediaType = 'movie'; 
+        let trailerKey = null;
 
         const translations = {
-            'pt-BR': { subtitle: "A fusão definitiva da sétima arte.", labelA: "Origem Alpha", labelB: "Origem Beta", placeholder: "Busque...", btn: "ENCONTRAR MATCH", resTitle: "Resultado da Alquimia", tag: "FUSÃO RECOMENDADA", readMore: "Ler sinopse completa", shareMsg: "Olha só o que o CineMatch recomendou para mim: " },
-            'en-US': { subtitle: "The ultimate entertainment fusion.", labelA: "Source Alpha", labelB: "Source Beta", placeholder: "Search...", btn: "FIND MATCH", resTitle: "Alchemy Result", tag: "RECOMMENDED FUSION", readMore: "Read full synopsis", shareMsg: "Check out what CineMatch recommended for me: " }
+            'pt-BR': { subtitle: "A fusão definitiva da sétima arte.", labelA: "Origem Alpha", labelB: "Origem Beta", placeholder: "Busque...", btn: "ENCONTRAR MATCH", resTitle: "Resultado da Alquimia", tag: "FUSÃO RECOMENDADA", readMore: "Sinopse Completa", watchTrailer: "Assistir Trailer", shareMsg: "Confira esta recomendação do CineMatch: " },
+            'en-US': { subtitle: "The ultimate entertainment fusion.", labelA: "Source Alpha", labelB: "Source Beta", placeholder: "Search...", btn: "FIND MATCH", resTitle: "Alchemy Result", tag: "RECOMMENDED FUSION", readMore: "Full Synopsis", watchTrailer: "Watch Trailer", shareMsg: "Check out this CineMatch recommendation: " }
         };
 
         function setMediaType(type) {
@@ -209,10 +224,9 @@
             resDiv.classList.remove('hidden');
             data.results.slice(0, 5).forEach(item => {
                 const title = item.title || item.name;
-                const date = item.release_date || item.first_air_date;
                 const div = document.createElement('div');
                 div.className = 'suggestion-item p-4 flex items-center gap-4 cursor-pointer transition-all border-b border-white/5';
-                div.innerHTML = `<img src="${item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : ''}" class="w-12 h-16 rounded-lg object-cover shadow-lg"><div class="text-left"><div class="font-bold">${title}</div><div class="text-xs text-gray-500">${date?.split('-')[0] || ''}</div></div>`;
+                div.innerHTML = `<img src="${item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : ''}" class="w-12 h-16 rounded-lg object-cover shadow-lg"><div class="text-left"><div class="font-bold text-sm">${title}</div></div>`;
                 div.onclick = () => selectMedia(item, input.id, resultDivId);
                 resDiv.appendChild(div);
             });
@@ -224,13 +238,11 @@
             const selectionId = isA ? 'selected1' : 'selected2';
             const targetDiv = document.getElementById(selectionId);
             const input = document.getElementById(inputId);
-            const title = item.title || item.name;
-
             input.classList.add('hidden');
             document.getElementById(resultDivId).classList.add('hidden');
             targetDiv.classList.remove('hidden');
-            targetDiv.innerHTML = `<img src="https://image.tmdb.org/t/p/w92${item.poster_path}" class="w-16 h-20 rounded-xl shadow-2xl"><div class="flex-grow text-left"><div class="text-xl font-black">${title}</div><button onclick="resetSelection('${inputId}')" class="text-sm text-blue-400 font-bold hover:text-white transition-colors uppercase tracking-widest mt-1">Trocar</button></div>`;
-            document.getElementById('bg-overlay').style.backgroundImage = `url(${IMG_URL + item.poster_path})`;
+            targetDiv.innerHTML = `<img src="https://image.tmdb.org/t/p/w92${item.poster_path}" class="w-16 h-20 rounded-xl shadow-2xl"><div class="flex-grow text-left"><div class="text-xl font-black">${item.title || item.name}</div><button onclick="resetSelection('${inputId}')" class="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Trocar</button></div>`;
+            document.getElementById('bg-overlay').style.backgroundImage = `url(https://image.tmdb.org/t/p/w1280${item.poster_path})`;
             checkButtonState();
         }
 
@@ -244,27 +256,53 @@
 
         function checkButtonState() { document.getElementById('btnMatch').disabled = !(movieA && movieB); }
 
-        function openModal() {
+        async function fetchTrailer(id) {
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/videos?api_key=${API_KEY}&language=pt-BR`);
+                const data = await res.json();
+                let trailer = data.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                if (!trailer) {
+                    const resEn = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/videos?api_key=${API_KEY}`);
+                    const dataEn = await resEn.json();
+                    trailer = dataEn.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                }
+                return trailer ? trailer.key : null;
+            } catch (e) { return null; }
+        }
+
+        function openModal(withVideo = false) {
             if(!currentRec) return;
             document.getElementById('modal-title').innerText = currentRec.title || currentRec.name;
             document.getElementById('modal-desc').innerText = currentRec.overview;
+            const videoContainer = document.getElementById('modal-video-container');
+            const frame = document.getElementById('trailer-frame');
+            
+            if(withVideo && trailerKey) {
+                videoContainer.classList.remove('hidden');
+                frame.src = `https://www.youtube.com/embed/${trailerKey}?autoplay=1&modestbranding=1&rel=0`;
+            } else {
+                videoContainer.classList.add('hidden');
+                frame.src = "";
+            }
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
-        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('trailer-frame').src = "";
+        }
 
         function share(platform) {
             const lang = document.getElementById('langSelect').value;
             const t = translations[lang] || translations['pt-BR'];
             const url = window.location.href;
-            const title = currentRec.title || currentRec.name;
-            const text = `${t.shareMsg}${title} - `;
+            const text = `${t.shareMsg}${currentRec.title || currentRec.name} - `;
             let shareUrl = '';
             switch(platform) {
                 case 'wa': shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + url)}`; break;
                 case 'tg': shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`; break;
                 case 'x': shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`; break;
-                case 'copy': navigator.clipboard.writeText(`${text} ${url}`); alert('Copiado!'); return;
+                case 'copy': navigator.clipboard.writeText(`${text} ${url}`); alert('Link Copiado!'); return;
             }
             if(shareUrl) window.open(shareUrl, '_blank');
         }
@@ -276,7 +314,6 @@
             btn.innerText = "FUNDINDO...";
 
             try {
-                // DNA Temático
                 const [detA, detB, kwA, kwB] = await Promise.all([
                     fetch(`https://api.themoviedb.org/3/${mediaType}/${movieA.id}?api_key=${API_KEY}&language=${lang}`).then(r => r.json()),
                     fetch(`https://api.themoviedb.org/3/${mediaType}/${movieB.id}?api_key=${API_KEY}&language=${lang}`).then(r => r.json()),
@@ -285,14 +322,13 @@
                 ]);
 
                 let candidates = [];
-                // Se for filme e tiver coleção
                 if (mediaType === 'movie' && (detA.belongs_to_collection || detB.belongs_to_collection)) {
                     const collId = detA.belongs_to_collection?.id || detB.belongs_to_collection?.id;
                     const collRes = await fetch(`https://api.themoviedb.org/3/collection/${collId}?api_key=${API_KEY}&language=${lang}`).then(r => r.json());
                     candidates = collRes.parts.filter(p => p.id !== movieA.id && p.id !== movieB.id);
                 }
 
-                const keys = [...(kwA.keywords || kwA.results), ...(kwB.keywords || kwB.results)].map(k => k.id).slice(0, 8).join('|');
+                const keys = [...(kwA.keywords || kwA.results || []), ...(kwB.keywords || kwB.results || [])].map(k => k.id).slice(0, 8).join('|');
                 const genres = movieA.genre_ids.filter(id => movieB.genre_ids.includes(id)).join(',');
 
                 const discover = await fetch(`https://api.themoviedb.org/3/discover/${mediaType}?api_key=${API_KEY}&with_keywords=${keys}&with_genres=${genres}&sort_by=popularity.desc&language=${lang}&exclude_ids=${movieA.id},${movieB.id}`).then(r => r.json());
@@ -300,6 +336,7 @@
 
                 const finalResult = candidates[Math.floor(Math.random() * Math.min(candidates.length, 15))];
                 currentRec = finalResult;
+                trailerKey = await fetchTrailer(finalResult.id);
 
                 if (finalResult) {
                     const t = translations[lang] || translations['pt-BR'];
@@ -308,14 +345,15 @@
                     
                     document.getElementById('matchResult').classList.remove('hidden');
                     document.getElementById('matchCard').innerHTML = `
-                        <img src="${IMG_URL + finalResult.poster_path}" class="w-full md:w-[400px] object-cover h-[550px]">
-                        <div class="p-12 flex flex-col justify-center text-left flex-grow">
+                        <img src="https://image.tmdb.org/t/p/w1280${finalResult.poster_path}" class="w-full md:w-[400px] object-cover h-[550px]">
+                        <div class="p-10 md:p-14 flex flex-col justify-center text-left flex-grow">
                             <span class="text-blue-400 text-sm font-black uppercase tracking-[0.3em] mb-4">${t.tag}</span>
-                            <h3 class="text-5xl font-black mb-6 leading-none">${resTitle}</h3>
-                            <p class="text-gray-300 text-lg leading-relaxed mb-2 font-light">${finalResult.overview.substring(0, 220)}...</p>
-                            <button onclick="openModal()" class="text-blue-400 hover:text-white transition-all text-sm font-bold uppercase tracking-widest mb-8 text-left">${t.readMore} +</button>
-                            <div class="flex flex-wrap items-center gap-4 mb-8">
+                            <h3 class="text-5xl font-black mb-6 leading-none tracking-tighter">${resTitle}</h3>
+                            <p class="text-gray-300 text-lg leading-relaxed mb-4 font-light">${finalResult.overview.substring(0, 200)}...</p>
+                            <button onclick="openModal(false)" class="text-blue-400 hover:text-white transition-all text-sm font-bold uppercase tracking-widest mb-8 text-left">${t.readMore} +</button>
+                            <div class="flex flex-wrap items-center gap-4 mb-10">
                                 <div class="px-6 py-3 rounded-2xl bg-white/10 font-bold text-xl">⭐ ${finalResult.vote_average.toFixed(1)}</div>
+                                ${trailerKey ? `<button onclick="openModal(true)" class="btn-play px-7 py-3 rounded-2xl font-bold flex items-center gap-3">▶ ${t.watchTrailer}</button>` : ''}
                                 <div class="text-gray-500 font-bold text-lg italic">${resDate?.split('-')[0]}</div>
                             </div>
                             <div class="flex items-center gap-3">
@@ -327,9 +365,9 @@
                         </div>`;
                     
                     window.scrollTo({ top: document.getElementById('matchResult').offsetTop - 50, behavior: 'smooth' });
-                    document.getElementById('bg-overlay').style.backgroundImage = `url(${IMG_URL + finalResult.poster_path})`;
+                    document.getElementById('bg-overlay').style.backgroundImage = `url(https://image.tmdb.org/t/p/w1280${finalResult.poster_path})`;
                 }
-            } catch (e) { alert("Erro ao processar alquimia."); }
+            } catch (e) { alert("Erro na alquimia cinematográfica."); }
             btn.disabled = false;
             btn.innerText = translations[lang]?.btn || "ENCONTRAR MATCH";
         }
